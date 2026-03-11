@@ -5,6 +5,8 @@ import (
 	"net/http"
 
 	"github.com/atul-engineer/document-service/internal/document"
+	"github.com/atul-engineer/document-service/internal/event"
+	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
@@ -24,6 +26,9 @@ func CreateDocument(client *mongo.Client) http.HandlerFunc {
 			http.Error(w, "Failed to create document", http.StatusInternalServerError)
 			return
 		}
+		// Publish document event to Kafka
+		eventProducer := event.InitKafkaProducer()
+		event.PublishDocumentEvent(r.Context(), eventProducer, res.InsertedID.(bson.ObjectID), "created")
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(res)
 	}
