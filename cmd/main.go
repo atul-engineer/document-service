@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/atul-engineer/document-service/internal/cache"
 	"github.com/atul-engineer/document-service/internal/db"
 	"github.com/atul-engineer/document-service/internal/router"
 )
@@ -18,8 +19,15 @@ func main() {
 		}
 	}()
 
-	server := router.StartServer(mongoClient)
-	fmt.Println("Server is running on http://localhost:8080")
+	redisClient := cache.ConnectRedis()
+	defer func() {
+		if err := redisClient.Close(); err != nil {
+			log.Println("redis disconnected")
+		}
+	}()
+
+	server := router.StartServer(mongoClient, redisClient)
+	fmt.Printf("Server is running on http://localhost%s", server.Addr)
 	if err := server.ListenAndServe(); err != nil {
 		panic(err)
 	}

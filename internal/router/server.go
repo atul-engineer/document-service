@@ -1,21 +1,30 @@
 package router
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/redis/go-redis/v9"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
-func StartServer(client *mongo.Client) *http.Server {
+func StartServer(client *mongo.Client, redisClient *redis.Client) *http.Server {
 	router := chi.NewRouter()
 	router.Route("/documents", func(r chi.Router) {
 		r.Post("/", CreateDocument(client))
-		r.Get("/", ListDocuments(client))
+		r.Get("/", ListDocuments(client, redisClient))
 	})
 
+	var port int
+	fmt.Print("Enter the port number to run the server on: ")
+	_, err := fmt.Scanln(&port)
+	if err != nil {
+		fmt.Println("Invalid input. Defaulting to port ", port)
+		port = 8080
+	}
 	server := http.Server{
-		Addr:    ":8080",
+		Addr:    fmt.Sprintf(":%d", port),
 		Handler: router,
 	}
 	return &server

@@ -6,9 +6,11 @@ import (
 	"log"
 
 	"github.com/atul-engineer/document-service/internal/document"
+	"github.com/redis/go-redis/v9"
 	"github.com/segmentio/kafka-go"
 )
 
+var DocumentCacheKey = "documents_cache"
 
 func InitKafkaConsumer() *kafka.Reader {
 	// Implementation for initializing Kafka consumer
@@ -21,7 +23,7 @@ func InitKafkaConsumer() *kafka.Reader {
 	return reader
 }
 
-func ConsumeDocumentEvents(ctx context.Context, reader *kafka.Reader) {
+func ConsumeDocumentEvents(ctx context.Context, reader *kafka.Reader, redisClient *redis.Client) {
 	// Implementation for consuming document events from Kafka
 	for {
 		msg, err := reader.ReadMessage(ctx)
@@ -39,6 +41,13 @@ func ConsumeDocumentEvents(ctx context.Context, reader *kafka.Reader) {
 		if document.EventType == "created" {
 			// Process the document event (e.g., update read model, trigger workflows, etc.)
 			log.Printf("Processing document event for document ID: %s", document.DocumentID.Hex())
+			// Invalidate cache for documents list
+			if err := redisClient.Del(ctx, DocumentCacheKey).Err(); err != nil {
+				log.Printf("Failed to invalidate documents cache: %v", err)
+			} else {
+				log.Println("Documents cache invalidated successfully")
+			}
+
 		} else {
 			log.Printf("Unknown event type: %s", document.EventType)
 		}
