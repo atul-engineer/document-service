@@ -3,7 +3,9 @@ package router
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 
+	"github.com/atul-engineer/document-service/internal/registry"
 	"github.com/go-chi/chi/v5"
 	"github.com/redis/go-redis/v9"
 	"go.mongodb.org/mongo-driver/v2/mongo"
@@ -27,5 +29,11 @@ func StartServer(client *mongo.Client, redisClient *redis.Client) *http.Server {
 		Addr:    fmt.Sprintf(":%d", port),
 		Handler: router,
 	}
+	registry, err := registry.NewRegistry([]string{"localhost:2379"})
+	if err != nil {
+		fmt.Println("Failed to connect to etcd registry:", err)
+	}
+	addr := "localhost:" + strconv.Itoa(port)
+	_ = registry.Register("document-service", "instance-1", addr)
 	return &server
 }
